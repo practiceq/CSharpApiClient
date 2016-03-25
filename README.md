@@ -3,6 +3,11 @@ C# client library used to access IntakeQ's API (https://intakeq.com).
 
 For API documentation refer to http://support.intakeq.com/intakeq-api
 
+## Installing via NuGet
+```
+Install-Package intakeq-api
+```
+
 ## Using this library
 All methods are available in the APIClient class. Instantiate the class by passing your API key through the constructor. 
 ```csharp

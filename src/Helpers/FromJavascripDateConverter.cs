@@ -18,7 +18,8 @@ namespace IntakeQ.ApiClient.Helpers
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            throw new NotImplementedException();
+            //not using this for now
+            serializer.Serialize(writer, value);
         }
     }
 }

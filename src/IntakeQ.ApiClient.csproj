@@ -85,12 +85,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\IntakeQ.Data\IntakeQ.Data.csproj">
-      <Project>{73C6F077-6C6A-4EF2-B60C-2DA392B2A286}</Project>
-      <Name>IntakeQ.Data</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

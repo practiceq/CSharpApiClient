@@ -18,8 +18,12 @@ namespace IntakeQ.ApiClient.Helpers
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            //not using this for now
-            serializer.Serialize(writer, value);
+            var date = value as DateTime?;
+            if (date == null) return;
+            
+            
+            var epoch = date.Value.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+            serializer.Serialize(writer, epoch.ToString("N0"));
         }
     }
 }

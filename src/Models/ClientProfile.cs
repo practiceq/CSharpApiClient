@@ -5,11 +5,15 @@ using Newtonsoft.Json;
 
 namespace IntakeQ.ApiClient.Models
 {
-    public class ClientProfile : Client
+    public class ClientProfile 
     {
+        public int ClientId { get; set; }
+        public string Name { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string MiddleName { get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
         [JsonConverter(typeof(FromJavascripDateConverter))]
         public DateTime? DateOfBirth { get; set; }
         public string MaritalStatus { get; set; }
@@ -24,6 +28,12 @@ namespace IntakeQ.ApiClient.Models
         public string Address { get; set; }
         public string UnitNumber { get; set; }
 
+        public string StreetAddress { get; set; }
+        public string City { get; set; }
+        public string State { get; set; }
+        public string PostalCode { get; set; }
+        public string Country { get; set; }
+        public string StateShort { get; set; }
 
         public string AdditionalInformation { get; set; }
 
@@ -49,6 +59,7 @@ namespace IntakeQ.ApiClient.Models
         [JsonConverter(typeof(FromJavascripDateConverter))]
         public DateTime? LastActivityDate { get; set; }
 
+        public string PractitionerId { get; set; }
         public List<ClientProfileCustomField> CustomFields { get; set; }
 
         public ClientProfile()

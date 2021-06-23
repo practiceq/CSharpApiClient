@@ -60,6 +60,7 @@ namespace IntakeQ.ApiClient.Models
         public DateTime? LastActivityDate { get; set; }
 
         public string PractitionerId { get; set; }
+        public string ExternalClientId { get; set; }
         public List<ClientProfileCustomField> CustomFields { get; set; }
 
         public ClientProfile()

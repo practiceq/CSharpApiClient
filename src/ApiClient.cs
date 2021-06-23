@@ -20,11 +20,8 @@ namespace IntakeQ.ApiClient
     public class ApiClient
     {
         private readonly string _apiKey;
-//#if DEBUG
-//        private readonly string _baseUrl = "https://localhost/api/v1/";
-//#else
         private readonly string _baseUrl = "https://intakeq.com/api/v1/";
-//#endif
+
         public ApiClient(string apiKey)
         {
             _apiKey = apiKey;
@@ -44,7 +41,7 @@ namespace IntakeQ.ApiClient
             return request;
         }
         
-        public async Task<IEnumerable<IntakeSummary>> GetIntakesSummary(string clientSearch, DateTime? startDate = null, DateTime? endDate = null, int? pageNumber = null)
+        public async Task<IEnumerable<IntakeSummary>> GetIntakesSummary(string clientSearch, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, string externalClientId = null, int? pageNumber = null)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -57,6 +54,10 @@ namespace IntakeQ.ApiClient
                     parameters.Add("startDate", startDate.Value.ToString("yyyy-MM-dd"));
                 if (endDate.HasValue)
                     parameters.Add("endDate", endDate.Value.ToString("yyyy-MM-dd"));
+                if (clientId.HasValue)
+                    parameters.Add("clientId", clientId.Value.ToString());
+                if (!string.IsNullOrEmpty(externalClientId))
+                    parameters.Add("externalClientId", externalClientId);
                 if (pageNumber.HasValue)
                     parameters.Add("page", pageNumber.Value.ToString());
 
@@ -162,7 +163,7 @@ namespace IntakeQ.ApiClient
             }
         }
 
-        public async Task<IEnumerable<Client>> GetClients(string search = null, int? pageNumber = null, DateTime? dateCreatedStart = null, DateTime? dateCreatedEnd = null, Dictionary<string, string> customFields = null)
+        public async Task<IEnumerable<Client>> GetClients(string search = null, int? pageNumber = null, DateTime? dateCreatedStart = null, DateTime? dateCreatedEnd = null, Dictionary<string, string> customFields = null, string externalClientId = null)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -177,6 +178,8 @@ namespace IntakeQ.ApiClient
                     parameters.Add("dateCreatedStart", dateCreatedStart.Value.ToString("yyyy-MM-dd"));
                 if (dateCreatedEnd.HasValue)
                     parameters.Add("dateCreatedEnd", dateCreatedEnd.Value.ToString("yyyy-MM-dd"));
+                if (!string.IsNullOrEmpty(externalClientId))
+                    parameters.Add("externalClientId", externalClientId);
 
                 if (customFields?.Count > 0)
                 {
@@ -201,7 +204,7 @@ namespace IntakeQ.ApiClient
             }
         }
 
-        public async Task<IEnumerable<ClientProfile>> GetClientsWithProfile(string search = null, int? pageNumber = null, DateTime? dateCreatedStart = null, DateTime? dateCreatedEnd = null, Dictionary<string, string> customFields = null)
+        public async Task<IEnumerable<ClientProfile>> GetClientsWithProfile(string search = null, int? pageNumber = null, DateTime? dateCreatedStart = null, DateTime? dateCreatedEnd = null, Dictionary<string, string> customFields = null, string externalClientId = null)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -217,6 +220,8 @@ namespace IntakeQ.ApiClient
                     parameters.Add("dateCreatedStart", dateCreatedStart.Value.ToString("yyyy-MM-dd"));
                 if (dateCreatedEnd.HasValue)
                     parameters.Add("dateCreatedEnd", dateCreatedEnd.Value.ToString("yyyy-MM-dd"));
+                if (!string.IsNullOrEmpty(externalClientId))
+                    parameters.Add("externalClientId", externalClientId);
 
                 if (customFields?.Count > 0)
                 {
@@ -429,6 +434,231 @@ namespace IntakeQ.ApiClient
                     var json = await response.Content.ReadAsStringAsync();
                     var questionnaires = JsonConvert.DeserializeObject<IEnumerable<Questionnaire>>(json);
                     return questionnaires;
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task<IEnumerable<Invoice>> GetInvoicesByClient(int clientId)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var parameters = new NameValueCollection();
+                parameters.Add("clientId", clientId.ToString());
+                
+                var request = GetHttpMessage("invoices" + parameters.ToQueryString(), HttpMethod.Get);
+                
+                
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    Console.Write(json);
+                    var result = JsonConvert.DeserializeObject<IEnumerable<Invoice>>(json);
+                    return result;
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new HttpRequestException(error);
+                }
+            }
+        }
+        
+        public async Task<Appointment> CreateAppointment(CreateAppointmentDto dto)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"appointments", HttpMethod.Post);
+                request.Content = new StringContent(JsonConvert.SerializeObject(dto), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Appointment>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task<Appointment> UpdateAppointment(UpdateAppointmentDto dto)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"appointments", HttpMethod.Put);
+                request.Content = new StringContent(JsonConvert.SerializeObject(dto), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Appointment>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+
+        public async Task<IEnumerable<Models.File>> GetFilesByClient(string clientId)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var parameters = new NameValueCollection();
+                parameters.Add("clientId", clientId);
+
+                var request = GetHttpMessage("files" + parameters.ToQueryString(), HttpMethod.Get);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    Console.Write(json);
+                    var result = JsonConvert.DeserializeObject<IEnumerable<Models.File>>(json);
+                    return result;
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new HttpRequestException(error);
+                }
+            }
+        }
+
+        public async Task<byte[]> GetFile(string id)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var request = GetHttpMessage($"files/{id}", HttpMethod.Get);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var bytes = await response.Content.ReadAsByteArrayAsync();
+                    return bytes;
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+
+        public async Task<IEnumerable<Folder>> GetFolders()
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var request = GetHttpMessage("folders" , HttpMethod.Get);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    Console.Write(json);
+                    var result = JsonConvert.DeserializeObject<IEnumerable<Folder>>(json);
+                    return result;
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new HttpRequestException(error);
+                }
+            }
+        }
+
+        public async Task UploadFile(string clientId, byte[] fileData, string fileName, string contentType)
+        {   
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("X-Auth-Key", _apiKey);                
+
+                using (var content = new MultipartFormDataContent())
+                {
+                    using (var streamContent = new StreamContent(new MemoryStream(fileData)))
+                    {
+                        streamContent.Headers.Add("Content-Type", "application/octet-stream");
+                        streamContent.Headers.Add("Content-Disposition", "form-data; name=\"file\"; filename=\"" + fileName + "\"");
+                        streamContent.Headers.ContentType.MediaType = contentType;
+                        
+                        content.Add(streamContent, "file", fileName);
+                        
+                        HttpResponseMessage response = await client.PostAsync(new Uri($"{_baseUrl}files/{clientId}"), content);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            var error = await response.Content.ReadAsStringAsync();
+                            throw new HttpRequestException(error);
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task DeleteFile(string id)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var request = GetHttpMessage($"files/{id}", HttpMethod.Delete);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new HttpRequestException(error);
+                }
+            }
+        }
+        
+        public async Task<IEnumerable<Practitioner>> ListPractitioners()
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                
+                var request = GetHttpMessage("practitioners", HttpMethod.Get);
+                
+                
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    Console.Write(json);
+                    var result = JsonConvert.DeserializeObject<IEnumerable<Practitioner>>(json);
+                    return result;
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new HttpRequestException(error);
+                }
+            }
+        }
+
+        public async Task<Practitioner> CreatePractitioner(Practitioner practitioner)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"practitioners", HttpMethod.Post);
+                request.Content = new StringContent(JsonConvert.SerializeObject(practitioner), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Practitioner>(json);
                 }
                 else
                 {

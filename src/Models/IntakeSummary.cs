@@ -17,5 +17,6 @@ namespace IntakeQ.ApiClient.Models
         public string QuestionnaireName { get; set; }
         public string Id { get; set; }
         public int ClientId { get; set; }
+        public string ExternalClientId { get; set; }
     }
 }

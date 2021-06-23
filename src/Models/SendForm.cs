@@ -7,5 +7,7 @@ namespace IntakeQ.ApiClient.Models
         public string ClientEmail { get; set; }
         public string ClientName { get; set; }
         public string PractitionerId { get; set; }
+        public string ClientPhone { get; set; }
+        public string ExternalClientId { get; set; }
     }
 }

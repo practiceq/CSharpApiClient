@@ -25,9 +25,38 @@ namespace IntakeQ.ApiClient.Models
         public string PractitionerName { get; set; }
         public string PractitionerEmail { get; set; }
         public string IntakeId { get; set; }
+        public string ReminderType { get; set; }
         [JsonConverter(typeof(FromJavascripDateConverter))]
         public DateTime DateCreated { get; set; }
         public string CreatedBy { get; set; }
+        
         public bool BookedByClient { get; set; }
+    }
+    
+    public class CreateAppointmentDto
+    {
+        public int ClientId { get; set; }
+        public string ServiceId { get; set; }
+        public string LocationId { get; set; }
+        public string PractitionerId { get; set; }
+        public double UtcDateTime { get; set; }
+        public string Status { get; set; }
+        public string ClientNote { get; set; }
+        public string PractitionerNote { get; set; }
+        public bool SendClientEmailNotification { get; set; }
+        public string ReminderType { get; set; }
+    }
+    
+    public class UpdateAppointmentDto
+    {
+        public string Id { get; set; }
+        public string ServiceId { get; set; }
+        public string LocationId { get; set; }
+        public double UtcDateTime { get; set; }
+        public string Status { get; set; }
+        public string ClientNote { get; set; }
+        public string PractitionerNote { get; set; }
+        public string ReminderType { get; set; }
+        public bool SendClientEmailNotification { get; set; }
     }
 }

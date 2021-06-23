@@ -8,6 +8,16 @@ namespace IntakeQ.ApiClient.Models
     public class Intake: IntakeSummary
     {
         public List<Question> Questions { get; set; }
+        public List<ConsentForm> ConsentForms { get; set; }
+        
+        public class ConsentForm
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string DocumentType { get; set; }
+            public bool Signed { get; set; }
+            public double? DateSubmitted { get; set; }
+        }
 
 
     }

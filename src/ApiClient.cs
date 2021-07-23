@@ -666,5 +666,144 @@ namespace IntakeQ.ApiClient
                 }
             }
         }
+        
+        public async Task<Practitioner> UpdatePractitioner(Practitioner practitioner)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"practitioners", HttpMethod.Put);
+                request.Content = new StringContent(JsonConvert.SerializeObject(practitioner), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Practitioner>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task DisablePractitioner(string id)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"practitioners/{id}/disable", HttpMethod.Post);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task EnablePractitioner(string id)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"practitioners/{id}/enable", HttpMethod.Post);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task<IEnumerable<Assistant>> ListAssistants()
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                
+                var request = GetHttpMessage("assistants", HttpMethod.Get);
+                
+                
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    Console.Write(json);
+                    var result = JsonConvert.DeserializeObject<IEnumerable<Assistant>>(json);
+                    return result;
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new HttpRequestException(error);
+                }
+            }
+        }
+        
+        public async Task<Assistant> CreateAssistant(Assistant assistant)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"assistants", HttpMethod.Post);
+                request.Content = new StringContent(JsonConvert.SerializeObject(assistant), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Assistant>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task<Assistant> UpdateAssistant(Assistant assistant)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"assistants", HttpMethod.Put);
+                request.Content = new StringContent(JsonConvert.SerializeObject(assistant), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Assistant>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task DeleteAssistant(string id)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"assistants/{id}", HttpMethod.Delete);
+                
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
     }
 }

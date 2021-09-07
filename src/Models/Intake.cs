@@ -9,7 +9,7 @@ namespace IntakeQ.ApiClient.Models
     {
         public List<Question> Questions { get; set; }
         public List<ConsentForm> ConsentForms { get; set; }
-        
+
         public class ConsentForm
         {
             public string Id { get; set; }

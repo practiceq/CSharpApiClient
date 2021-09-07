@@ -10,5 +10,8 @@ namespace IntakeQ.ApiClient.Models
         public string Email { get; set; }
         public string ExternalPractitionerId { get; set; }
         public DateTime DateCreated { get; set; }
+        public bool IsInactive { get; set; }
+        
+        public string CompleteName => $"{FirstName} {LastName}";
     }
 }

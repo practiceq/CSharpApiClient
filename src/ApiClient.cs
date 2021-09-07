@@ -203,6 +203,26 @@ namespace IntakeQ.ApiClient
                 }
             }
         }
+        
+         public async Task<ClientProfile> GetClientProfile(int clientId)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+               
+                var request = GetHttpMessage($"clients/profile/{clientId}", HttpMethod.Get);
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<ClientProfile>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
 
         public async Task<IEnumerable<ClientProfile>> GetClientsWithProfile(string search = null, int? pageNumber = null, DateTime? dateCreatedStart = null, DateTime? dateCreatedEnd = null, Dictionary<string, string> customFields = null, string externalClientId = null)
         {
@@ -420,7 +440,7 @@ namespace IntakeQ.ApiClient
             }
         }
         
-        public async Task<IEnumerable<Questionnaire>> GetQuestionnaires(DateTime? startDate = null, DateTime? endDate = null, string status = null, string clientSearch = null, string practitionerEmail = null, int? pageNumber = null)
+        public async Task<IEnumerable<Questionnaire>> GetQuestionnaires()
         {
             using (HttpClient client = new HttpClient())
             {
@@ -621,12 +641,12 @@ namespace IntakeQ.ApiClient
             }
         }
         
-        public async Task<IEnumerable<Practitioner>> ListPractitioners()
+        public async Task<IEnumerable<Practitioner>> ListPractitioners(bool includeInactive = false)
         {
             using (HttpClient client = new HttpClient())
             {
                 
-                var request = GetHttpMessage("practitioners", HttpMethod.Get);
+                var request = GetHttpMessage($"practitioners?includeInactive={includeInactive}", HttpMethod.Get);
                 
                 
                 HttpResponseMessage response = await client.SendAsync(request);
@@ -712,6 +732,54 @@ namespace IntakeQ.ApiClient
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var request = GetHttpMessage($"practitioners/{id}/enable", HttpMethod.Post);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task DeletePractitioner(string id)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"practitioners/{id}", HttpMethod.Delete);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task TransferPractitionerData(string sourcePractitionerId, string destinationPractitionerId)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"practitioners/{sourcePractitionerId}/transferData/{destinationPractitionerId}", HttpMethod.Post);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task TransferClientOwnership(string sourcePractitionerId, string destinationPractitionerId)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"practitioners/{sourcePractitionerId}/transferClientOwnership/{destinationPractitionerId}", HttpMethod.Post);
 
                 HttpResponseMessage response = await client.SendAsync(request);
                 if (!response.IsSuccessStatusCode)

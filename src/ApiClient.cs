@@ -41,7 +41,7 @@ namespace IntakeQ.ApiClient
             return request;
         }
         
-        public async Task<IEnumerable<IntakeSummary>> GetIntakesSummary(string clientSearch, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, string externalClientId = null, int? pageNumber = null)
+        public async Task<IEnumerable<IntakeSummary>> GetIntakesSummary(string clientSearch, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, string externalClientId = null, int? pageNumber = null, bool getAll = false)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -60,6 +60,8 @@ namespace IntakeQ.ApiClient
                     parameters.Add("externalClientId", externalClientId);
                 if (pageNumber.HasValue)
                     parameters.Add("page", pageNumber.Value.ToString());
+                if (getAll)
+                    parameters.Add("all", "true");
 
                 var request = GetHttpMessage("intakes/summary" + parameters.ToQueryString(), HttpMethod.Get);
                 HttpResponseMessage response = await client.SendAsync(request);

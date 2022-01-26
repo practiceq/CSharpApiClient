@@ -41,7 +41,7 @@ namespace IntakeQ.ApiClient
             return request;
         }
         
-        public async Task<IEnumerable<IntakeSummary>> GetIntakesSummary(string clientSearch, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, string externalClientId = null, int? pageNumber = null)
+        public async Task<IEnumerable<IntakeSummary>> GetIntakesSummary(string clientSearch, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, string externalClientId = null, int? pageNumber = null, bool getAll = false)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -60,6 +60,8 @@ namespace IntakeQ.ApiClient
                     parameters.Add("externalClientId", externalClientId);
                 if (pageNumber.HasValue)
                     parameters.Add("page", pageNumber.Value.ToString());
+                if (getAll)
+                    parameters.Add("all", "true");
 
                 var request = GetHttpMessage("intakes/summary" + parameters.ToQueryString(), HttpMethod.Get);
                 HttpResponseMessage response = await client.SendAsync(request);
@@ -103,7 +105,7 @@ namespace IntakeQ.ApiClient
             {
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-               var request = GetHttpMessage($"intakes/send", HttpMethod.Post);
+                var request = GetHttpMessage($"intakes/send", HttpMethod.Post);
                 request.Content = new StringContent(JsonConvert.SerializeObject(sendForm), Encoding.UTF8, "application/json");
 
                 HttpResponseMessage response = await client.SendAsync(request);
@@ -128,6 +130,7 @@ namespace IntakeQ.ApiClient
             {
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+
                 var request = GetHttpMessage($"intakes/send?doNotSend=true", HttpMethod.Post);
                 request.Content = new StringContent(JsonConvert.SerializeObject(sendForm), Encoding.UTF8, "application/json");
 
@@ -144,13 +147,14 @@ namespace IntakeQ.ApiClient
             }
         }
         
-        public async Task<byte[]> DownloadPdf(string intakeId)
+        public async Task<byte[]> DownloadPdf(string id, bool isNote = false)
         {
             using (HttpClient client = new HttpClient())
             {
-                var request = GetHttpMessage($"intakes/{intakeId}/pdf", HttpMethod.Get);
+                var requestType = (isNote) ? "notes" : "intakes";
+                var request = GetHttpMessage($"{requestType}/{id}/pdf", HttpMethod.Get);
 
-                 HttpResponseMessage response = await client.SendAsync(request);
+                HttpResponseMessage response = await client.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {   
                     var bytes = await response.Content.ReadAsByteArrayAsync();
@@ -163,12 +167,12 @@ namespace IntakeQ.ApiClient
             }
         }
 
-        public async Task DownloadPdfAndSave(string intakeId, string destinationPath)
+        public async Task DownloadPdfAndSave(string id, string destinationPath, bool isNote = false)
         {
             using (HttpClient client = new HttpClient())
             {
-
-                var request = GetHttpMessage($"intakes/{intakeId}/pdf", HttpMethod.Get);
+                var requestType = (isNote) ? "notes" : "intakes";
+                var request = GetHttpMessage($"{requestType}/{id}/pdf", HttpMethod.Get);
 
                 HttpResponseMessage response = await client.SendAsync(request);
                 if (response.IsSuccessStatusCode)
@@ -893,6 +897,63 @@ namespace IntakeQ.ApiClient
 
                 HttpResponseMessage response = await client.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+
+        public async Task<IEnumerable<TreatmentNoteSummary>> GetNotesSummary(string clientSearch = "", DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, int? pageNumber = null, int? status = null)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var parameters = new NameValueCollection();
+                if (!string.IsNullOrEmpty(clientSearch))
+                    parameters.Add("client", clientSearch);
+                if (startDate.HasValue)
+                    parameters.Add("startDate", startDate.Value.ToString("yyyy-MM-dd"));
+                if (endDate.HasValue)
+                    parameters.Add("endDate", endDate.Value.ToString("yyyy-MM-dd"));
+                if (clientId.HasValue)
+                    parameters.Add("clientId", clientId.Value.ToString());
+                if (pageNumber.HasValue)
+                    parameters.Add("page", pageNumber.Value.ToString());
+                if (status.HasValue)
+                    parameters.Add("status", pageNumber.Value.ToString());
+
+                var request = GetHttpMessage("notes/summary" + parameters.ToQueryString(), HttpMethod.Get);
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    Console.Write(json);
+                    var notes = JsonConvert.DeserializeObject<IEnumerable<TreatmentNoteSummary>>(json);
+                    return notes;
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+
+        public async Task<TreatmentNote> GetFullNote(string noteId)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var request = GetHttpMessage($"notes/{noteId}", HttpMethod.Get);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    Console.Write(json);
+                    var note = JsonConvert.DeserializeObject<TreatmentNote>(json);
+                    return note;
+                }
+                else
                 {
                     throw new HttpRequestException(await response.Content.ReadAsStringAsync());
                 }

@@ -181,11 +181,11 @@ namespace IntakeQ.ApiClient
         {
             using (HttpClient client = new HttpClient())
             {
-                var request = GetHttpMessage($"practice/{idOrExternalPracticeId}/ephemeral/", HttpMethod.Get);
-
                 var parameters = new NameValueCollection();
                 if (!string.IsNullOrEmpty(userId))
                     parameters.Add("userId", userId);
+                
+                var request = GetHttpMessage($"practice/{idOrExternalPracticeId}/ephemeral" + parameters.ToQueryString(), HttpMethod.Get);
                 
                 HttpResponseMessage response = await client.SendAsync(request);
                 if (response.IsSuccessStatusCode)

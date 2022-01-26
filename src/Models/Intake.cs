@@ -9,6 +9,8 @@ namespace IntakeQ.ApiClient.Models
     {
         public List<Question> Questions { get; set; }
         public List<ConsentForm> ConsentForms { get; set; }
+        public string Url { get; set; }
+        public string Password { get; set; }
 
         public class ConsentForm
         {

@@ -118,7 +118,32 @@ namespace IntakeQ.ApiClient
                 }
             }
         }
+        
+        /// <summary>
+        /// Creates a form, but doesn't send it to the client. 
+        /// </summary>
+        public async Task<Intake> CreateForm(SendForm sendForm)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+                var request = GetHttpMessage($"intakes/send?doNotSend=true", HttpMethod.Post);
+                request.Content = new StringContent(JsonConvert.SerializeObject(sendForm), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Intake>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
         public async Task<byte[]> DownloadPdf(string intakeId)
         {
             using (HttpClient client = new HttpClient())

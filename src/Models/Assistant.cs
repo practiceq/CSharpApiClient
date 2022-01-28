@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace IntakeQ.ApiClient.Models
 {
@@ -10,5 +11,6 @@ namespace IntakeQ.ApiClient.Models
         public string ExternalAssistantId { get; set; }
         public DateTime DateCreated { get; set; }
         public string RoleName { get; set; }
+        public List<string> PractitionerIds { get; set; }
     }
 }

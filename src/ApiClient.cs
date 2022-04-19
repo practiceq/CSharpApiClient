@@ -130,7 +130,7 @@ namespace IntakeQ.ApiClient
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
 
-                var request = GetHttpMessage($"intakes/send?doNotSend=true", HttpMethod.Post);
+                var request = GetHttpMessage($"intakes/create", HttpMethod.Post);
                 request.Content = new StringContent(JsonConvert.SerializeObject(sendForm), Encoding.UTF8, "application/json");
 
                 HttpResponseMessage response = await client.SendAsync(request);
@@ -138,6 +138,28 @@ namespace IntakeQ.ApiClient
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     return JsonConvert.DeserializeObject<Intake>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task<IntakeAuthToken> CreateFormAuthToken(string intakeId)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+
+                var request = GetHttpMessage($"intakes/{intakeId}/token", HttpMethod.Post);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<IntakeAuthToken>(json);
                 }
                 else
                 {

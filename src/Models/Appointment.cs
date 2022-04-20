@@ -30,10 +30,10 @@ namespace IntakeQ.ApiClient.Models
         [JsonConverter(typeof(FromJavascripDateConverter))]
         public DateTime DateCreated { get; set; }
         public string CreatedBy { get; set; }
-        
+
         public bool BookedByClient { get; set; }
     }
-    
+
     public class CreateAppointmentDto
     {
         public int ClientId { get; set; }
@@ -47,7 +47,7 @@ namespace IntakeQ.ApiClient.Models
         public bool SendClientEmailNotification { get; set; }
         public string ReminderType { get; set; }
     }
-    
+
     public class UpdateAppointmentDto
     {
         public string Id { get; set; }

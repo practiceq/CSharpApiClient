@@ -12,7 +12,7 @@ namespace IntakeQ.ApiClient.Models
         public DateTime DateCreated { get; set; }
         public bool IsInactive { get; set; }
         public string RoleName { get; set; }
-        
+
         public string CompleteName => $"{FirstName} {LastName}";
     }
 }

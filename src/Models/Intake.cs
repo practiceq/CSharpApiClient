@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace IntakeQ.ApiClient.Models
 {
-    public class Intake: IntakeSummary
+    public class Intake : IntakeSummary
     {
         public List<Question> Questions { get; set; }
         public List<ConsentForm> ConsentForms { get; set; }

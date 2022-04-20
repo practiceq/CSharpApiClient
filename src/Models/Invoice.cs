@@ -7,7 +7,7 @@ namespace IntakeQ.ApiClient.Models
 {
     public class Invoice
     {
-        
+
 
         public string Id { get; set; }
         public string Status { get; set; }
@@ -21,7 +21,7 @@ namespace IntakeQ.ApiClient.Models
         public decimal TotalAmount { get; set; }
         public decimal AmountDue { get; set; }
         public decimal AmountPaid { get; set; }
-        public List<string> AdditionalEmailRecipients { get; set; }             
+        public List<string> AdditionalEmailRecipients { get; set; }
         public List<InvoicePayment> Payments { get; set; }
         public string DiscountType { get; set; }
         public decimal DiscountPercent { get; set; }
@@ -31,32 +31,32 @@ namespace IntakeQ.ApiClient.Models
         public string Currency { get; set; }
         public bool AllowTipping { get; set; }
         public bool AllowPartialPayments { get; set; }
-      
+
         public string MemberId { get; set; }
 
         public bool Automated { get; set; }
         public string CreatedBy { get; set; }
-      
+
         public string CurrencyIso { get; set; }
-       
-        public List<string> DiagnosisList { get; set; }       
+
+        public List<string> DiagnosisList { get; set; }
 
         //Payment fields
         public decimal TipAmount { get; set; }
-       
+
         public List<InvoiceItem> Items { get; set; }
         public string ClientPaymentPlanId { get; set; }
         public int? ClientPaymentPlanInterval { get; set; }
         public int ClientIdNumber { get; set; }
-        
+
         public Invoice()
         {
             Items = new List<InvoiceItem>();
         }
     }
-    
-     public class InvoicePayment
-    {       
+
+    public class InvoicePayment
+    {
         public double Date { get; set; }
 
         /// <summary>
@@ -64,9 +64,9 @@ namespace IntakeQ.ApiClient.Models
         /// </summary>
         public decimal Amount { get; set; }
         public string Currency { get; set; }
-       
+
         public string Method { get; set; }
-        public string AdditionalInfo { get; set; }        
+        public string AdditionalInfo { get; set; }
         public decimal RefundedAmount { get; set; }
 
         /// <summary>
@@ -113,12 +113,12 @@ namespace IntakeQ.ApiClient.Models
         public decimal Price { get; set; }
         public decimal Units { get; set; }
         public string Description { get; set; }
-        
+
         public double? Date { get; set; }
 
         public List<string> Modifiers { get; set; }
     }
-    
+
     public class CardDetails
     {
         public string Brand { get; set; }

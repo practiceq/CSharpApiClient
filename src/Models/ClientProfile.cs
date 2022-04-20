@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace IntakeQ.ApiClient.Models
 {
-    public class ClientProfile 
+    public class ClientProfile
     {
         public int ClientId { get; set; }
         public string Name { get; set; }

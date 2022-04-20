@@ -1,5 +1,5 @@
 namespace IntakeQ.ApiClient.Models
-{ 
+{
     /// <summary>
     /// Generic representation of a form template (Questionnaire, Treatment Note, Consent Form)
     /// </summary>

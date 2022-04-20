@@ -1,974 +1,217 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
-using IntakeQ.ApiClient.Helpers;
 using IntakeQ.ApiClient.Models;
-using Newtonsoft.Json;
 using System.IO;
 using Client = IntakeQ.ApiClient.Models.Client;
 using ClientProfile = IntakeQ.ApiClient.Models.ClientProfile;
 
-
 namespace IntakeQ.ApiClient
 {
-    public class ApiClient
+    public class ApiClient : ClientBase
     {
-        private readonly string _apiKey;
-        private readonly string _baseUrl = "https://intakeq.com/api/v1/";
+        private static readonly string _baseUrl = "https://intakeq.com/api/v1/";
 
-        public ApiClient(string apiKey)
+        public ApiClient(string apiKey) : base(apiKey, _baseUrl)
         {
-            _apiKey = apiKey;
-#if DEBUG
-            ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
-#endif
         }
 
-        private HttpRequestMessage GetHttpMessage(string methodName, HttpMethod methodType)
-        {
-            var request = new HttpRequestMessage()
+        public async Task<IEnumerable<IntakeSummary>> GetIntakesSummary(string clientSearch, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, string externalClientId = null, int? pageNumber = null, bool getAll = false) => await GetOrThrow<IEnumerable<IntakeSummary>>(
+            "intakes/summary",
+            new[]
             {
-                RequestUri = new Uri(_baseUrl + methodName),
-                Method = methodType,
-            };
-            request.Headers.Add("X-Auth-Key", _apiKey);
-            return request;
-        }
-        
-        public async Task<IEnumerable<IntakeSummary>> GetIntakesSummary(string clientSearch, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, string externalClientId = null, int? pageNumber = null, bool getAll = false)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                ("client", clientSearch),
+                ("startDate", startDate.Value.ToString("yyyy-MM-dd")),
+                ("endDate", endDate.Value.ToString("yyyy-MM-dd")),
+                ("clientId", clientId.HasValue ? clientId.Value.ToString() : null),
+                ("externalClientId", externalClientId),
+                ("page", pageNumber.HasValue ? pageNumber.Value.ToString(): null),
+                ("all", "true")
+            });
 
-                var parameters = new NameValueCollection();
-                if (!string.IsNullOrEmpty(clientSearch))
-                    parameters.Add("client", clientSearch);
-                if (startDate.HasValue)
-                    parameters.Add("startDate", startDate.Value.ToString("yyyy-MM-dd"));
-                if (endDate.HasValue)
-                    parameters.Add("endDate", endDate.Value.ToString("yyyy-MM-dd"));
-                if (clientId.HasValue)
-                    parameters.Add("clientId", clientId.Value.ToString());
-                if (!string.IsNullOrEmpty(externalClientId))
-                    parameters.Add("externalClientId", externalClientId);
-                if (pageNumber.HasValue)
-                    parameters.Add("page", pageNumber.Value.ToString());
-                if (getAll)
-                    parameters.Add("all", "true");
+        public async Task<Intake> GetFullIntake(string intakeId) => await GetOrThrow<Intake>($"intakes/{intakeId}");
 
-                var request = GetHttpMessage("intakes/summary" + parameters.ToQueryString(), HttpMethod.Get);
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var intakes = JsonConvert.DeserializeObject<IEnumerable<IntakeSummary>>(json);
-                    return intakes;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
+        public async Task<Intake> SendForm(SendForm sendForm) => await PostOrThrow<Intake>("intakes/send", sendForm);
 
-        public async Task<Intake> GetFullIntake(string intakeId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var request = GetHttpMessage($"intakes/{intakeId}", HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var intake = JsonConvert.DeserializeObject<Intake>(json);
-                    return intake;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<Intake> SendForm(SendForm sendForm)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"intakes/send", HttpMethod.Post);
-                request.Content = new StringContent(JsonConvert.SerializeObject(sendForm), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Intake>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
         /// <summary>
         /// Creates a form, but doesn't send it to the client. 
         /// </summary>
-        public async Task<Intake> CreateForm(SendForm sendForm)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        public async Task<Intake> CreateForm(SendForm sendForm) => await PostOrThrow<Intake>("intakes/create", sendForm);
 
+        public async Task<IntakeAuthToken> CreateFormAuthToken(string intakeId) => await PostOrThrow<IntakeAuthToken>($"intakes/{intakeId}/token");
 
-                var request = GetHttpMessage($"intakes/create", HttpMethod.Post);
-                request.Content = new StringContent(JsonConvert.SerializeObject(sendForm), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Intake>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<IntakeAuthToken> CreateFormAuthToken(string intakeId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-
-                var request = GetHttpMessage($"intakes/{intakeId}/token", HttpMethod.Post);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<IntakeAuthToken>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<byte[]> DownloadPdf(string id, bool isNote = false)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var requestType = (isNote) ? "notes" : "intakes";
-                var request = GetHttpMessage($"{requestType}/{id}/pdf", HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {   
-                    var bytes = await response.Content.ReadAsByteArrayAsync();
-                    return bytes;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
+        public async Task<byte[]> DownloadPdf(string id, bool isNote = false) => await GetBytesOrThrow($"{(isNote ? "notes" : "intakes")}/{id}/pdf");
 
         public async Task DownloadPdfAndSave(string id, string destinationPath, bool isNote = false)
         {
-            using (HttpClient client = new HttpClient())
+            var requestType = isNote ? "notes" : "intakes";
+            HttpResponseMessage response = await _httpClient.GetAsync($"{requestType}/{id}/pdf");
+            response.EnsureSuccessStatusCode();
+            using (var contentStream = await response.Content.ReadAsStreamAsync())
+            using (var stream = new FileStream(destinationPath, FileMode.CreateNew))
             {
-                var requestType = (isNote) ? "notes" : "intakes";
-                var request = GetHttpMessage($"{requestType}/{id}/pdf", HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    using (var contentStream = await response.Content.ReadAsStreamAsync())
-                    {
-                        using (var stream = new FileStream(destinationPath, FileMode.CreateNew))
-                        {
-                            await contentStream.CopyToAsync(stream);
-                        }
-                    }
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
+                await contentStream.CopyToAsync(stream);
             }
         }
 
         public async Task<IEnumerable<Client>> GetClients(string search = null, int? pageNumber = null, DateTime? dateCreatedStart = null, DateTime? dateCreatedEnd = null, Dictionary<string, string> customFields = null, string externalClientId = null)
         {
-            using (HttpClient client = new HttpClient())
             {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var fields = new List<(string, string)>{
+                    ("search", search),
+                    ("page", pageNumber.HasValue ? pageNumber.Value.ToString() : null),
+                    ("dateCreatedStart", dateCreatedStart.HasValue ? dateCreatedStart.Value.ToString("yyyy-MM-dd"): null),
+                    ("dateCreatedEnd", dateCreatedEnd.HasValue ? dateCreatedEnd.Value.ToString("yyyy-MM-dd"): null),
+                    ("externalClientId", externalClientId)
+                };
+                if (customFields != null)
+                {
+                    fields.AddRange(customFields?.Select(cf => ($"custom[{cf.Key}]", cf.Value)));
+                }
 
-                var parameters = new NameValueCollection();
-                if (!string.IsNullOrEmpty(search))
-                    parameters.Add("search", search);
-                if (pageNumber.HasValue)
-                    parameters.Add("page", pageNumber.Value.ToString());
-                if (dateCreatedStart.HasValue)
-                    parameters.Add("dateCreatedStart", dateCreatedStart.Value.ToString("yyyy-MM-dd"));
-                if (dateCreatedEnd.HasValue)
-                    parameters.Add("dateCreatedEnd", dateCreatedEnd.Value.ToString("yyyy-MM-dd"));
-                if (!string.IsNullOrEmpty(externalClientId))
-                    parameters.Add("externalClientId", externalClientId);
-
-                if (customFields?.Count > 0)
-                {
-                    foreach (var field in customFields)
-                    {
-                        parameters.Add($"custom[{field.Key}]", field.Value);
-                    }                    
-                }
-                
-                var request = GetHttpMessage("clients" + parameters.ToQueryString(), HttpMethod.Get);
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var clients = JsonConvert.DeserializeObject<IEnumerable<Client>>(json);
-                    return clients;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
+                return await GetOrThrow<IEnumerable<Client>>("clients", fields.ToArray());
             }
         }
-        
-         public async Task<ClientProfile> GetClientProfile(int clientId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-               
-                var request = GetHttpMessage($"clients/profile/{clientId}", HttpMethod.Get);
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<ClientProfile>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
+
+        public async Task<ClientProfile> GetClientProfile(int clientId) => await GetOrThrow<ClientProfile>($"clients/profile/{clientId}");
 
         public async Task<IEnumerable<ClientProfile>> GetClientsWithProfile(string search = null, int? pageNumber = null, DateTime? dateCreatedStart = null, DateTime? dateCreatedEnd = null, Dictionary<string, string> customFields = null, string externalClientId = null)
         {
-            using (HttpClient client = new HttpClient())
+            var fields = new List<(string, string)>{
+                ("search", search),
+                ("page", pageNumber.HasValue ? pageNumber.Value.ToString() : null),
+                ("includeProfile", "true"),
+                ("dateCreatedStart", dateCreatedStart.HasValue ? dateCreatedStart.Value.ToString("yyyy-MM-dd") : null),
+                ("dateCreatedEnd", dateCreatedEnd.HasValue ? dateCreatedEnd.Value.ToString("yyyy-MM-dd") : null),
+                ("externalClientId", externalClientId)
+            };
+            if (customFields != null)
             {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var parameters = new NameValueCollection();
-                if (!string.IsNullOrEmpty(search))
-                    parameters.Add("search", search);
-                if (pageNumber.HasValue)
-                    parameters.Add("page", pageNumber.Value.ToString());
-                parameters.Add("includeProfile", "true");
-                if (dateCreatedStart.HasValue)
-                    parameters.Add("dateCreatedStart", dateCreatedStart.Value.ToString("yyyy-MM-dd"));
-                if (dateCreatedEnd.HasValue)
-                    parameters.Add("dateCreatedEnd", dateCreatedEnd.Value.ToString("yyyy-MM-dd"));
-                if (!string.IsNullOrEmpty(externalClientId))
-                    parameters.Add("externalClientId", externalClientId);
-
-                if (customFields?.Count > 0)
-                {
-                    foreach (var field in customFields)
-                    {
-                        parameters.Add($"custom[{field.Key}]", field.Value);
-                    }                    
-                }
-                
-                var request = GetHttpMessage("clients" + parameters.ToQueryString(), HttpMethod.Get);
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var clients = JsonConvert.DeserializeObject<IEnumerable<ClientProfile>>(json);
-                    return clients;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
+                fields.AddRange(customFields?.Select(cf => ($"custom[{cf.Key}]", cf.Value)));
             }
-        }
-        
-        public async Task<ClientProfile> SaveClient(ClientProfile clientProfile)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                var request = GetHttpMessage($"clients", HttpMethod.Post);
-                request.Content = new StringContent(JsonConvert.SerializeObject(clientProfile), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<ClientProfile>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
+            return await GetOrThrow<IEnumerable<ClientProfile>>("clients", fields.ToArray());
         }
 
-        public async Task<byte[]> DownloadAttachment(string attachmentId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
+        public async Task<ClientProfile> SaveClient(ClientProfile clientProfile) => await PostOrThrow<ClientProfile>("clients", clientProfile);
 
-                var request = GetHttpMessage($"attachments/{attachmentId}", HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var bytes = await response.Content.ReadAsByteArrayAsync();
-                    return bytes;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
+        public async Task<byte[]> DownloadAttachment(string attachmentId) => await GetBytesOrThrow($"attachments/{attachmentId}");
 
         public async Task DownloadAttachmentAndSave(string attachmentId, string destinationPath)
         {
-            using (HttpClient client = new HttpClient())
+            var response = await _httpClient.GetAsync($"attachments/{attachmentId}");
+            response.EnsureSuccessStatusCode();
+            using (var contentStream = await response.Content.ReadAsStreamAsync())
+            using (var stream = new FileStream(destinationPath, FileMode.CreateNew))
             {
-
-                var request = GetHttpMessage($"attachments/{attachmentId}", HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    using (var contentStream = await response.Content.ReadAsStreamAsync())
-                    {
-                        using (var stream = new FileStream(destinationPath, FileMode.CreateNew))
-                        {
-                            await contentStream.CopyToAsync(stream);
-                        }
-                    }
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
+                await contentStream.CopyToAsync(stream);
             }
         }
 
-        public async Task<Intake> UpdateOfficeUseAnswers(Intake intake)
-        {
-            using (HttpClient client = new HttpClient())
+        public async Task<Intake> UpdateOfficeUseAnswers(Intake intake) => await PostOrThrow<Intake>("intakes",
+            //Let's clean the intake object to keep only the data we need to send
+            new Intake()
             {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                Id = intake.Id,
+                Questions = intake.Questions.Where(x => x.OfficeUse).ToList()
+            });
 
-                //Let's clean the intake object to keep only the data we need to send
-                var cleanIntake = new Intake()
+        public async Task<IEnumerable<Appointment>> GetAppointments(DateTime? startDate = null, DateTime? endDate = null, string status = null, string clientSearch = null, string practitionerEmail = null, int? pageNumber = null) => await GetOrThrow<IEnumerable<Appointment>>(
+                "appointments",
+                new[]
                 {
-                    Id = intake.Id,
-                    Questions = intake.Questions.Where(x => x.OfficeUse).ToList()
-                };
+                    ("client", clientSearch),
+                    ("status", status),
+                    ("practitionerEmail", practitionerEmail),
+                    ("startDate", startDate.HasValue ? startDate.Value.ToString("yyyy-MM-dd") : null),
+                    ("endDate", endDate.HasValue ? endDate.Value.ToString("yyyy-MM-dd") : null),
+                    ("page", pageNumber.HasValue ? pageNumber.Value.ToString(): null)
+                });
 
-                var request = GetHttpMessage($"intakes", HttpMethod.Post);
-                request.Content = new StringContent(JsonConvert.SerializeObject(cleanIntake), Encoding.UTF8, "application/json");
+        public async Task<Appointment> GetAppointment(string appointmentId) => await GetOrThrow<Appointment>($"appointments/{appointmentId}");
 
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Intake>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
+        public async Task<AppointmentSettings> GetAppointmentSettings() => await GetOrThrow<AppointmentSettings>("appointments/settings");
 
-        public async Task<IEnumerable<Appointment>> GetAppointments(DateTime? startDate = null, DateTime? endDate = null, string status = null, string clientSearch = null, string practitionerEmail = null, int? pageNumber = null)
-        {
-            using (HttpClient client = new HttpClient())
+        public async Task<IEnumerable<Questionnaire>> GetQuestionnaires() => await GetOrThrow<IEnumerable<Questionnaire>>("questionnaires");
+
+        public async Task<IEnumerable<Invoice>> GetInvoicesByClient(int clientId) => await GetOrThrow<IEnumerable<Invoice>>(
+            "invoices",
+            new[]
             {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                ("clientId", clientId.ToString())
+            });
 
-                var parameters = new NameValueCollection();
-                if (!string.IsNullOrEmpty(clientSearch))
-                    parameters.Add("client", clientSearch);
-                if (!string.IsNullOrEmpty(status))
-                    parameters.Add("status", status);
-                if (!string.IsNullOrEmpty(practitionerEmail))
-                    parameters.Add("practitionerEmail", practitionerEmail);
-                if (startDate.HasValue)
-                    parameters.Add("startDate", startDate.Value.ToString("yyyy-MM-dd"));
-                if (endDate.HasValue)
-                    parameters.Add("endDate", endDate.Value.ToString("yyyy-MM-dd"));
-                if (pageNumber.HasValue)
-                    parameters.Add("page", pageNumber.Value.ToString());
+        public async Task<Appointment> CreateAppointment(CreateAppointmentDto dto) => await PostOrThrow<Appointment>("appointments", dto);
 
-                var request = GetHttpMessage("appointments" + parameters.ToQueryString(), HttpMethod.Get);
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var appointments = JsonConvert.DeserializeObject<IEnumerable<Appointment>>(json);
-                    return appointments;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
+        public async Task<Appointment> UpdateAppointment(UpdateAppointmentDto dto) => await PutOrThrow<Appointment>("appointments", dto);
 
-        public async Task<Appointment> GetAppointment(string appointmentId)
-        {
-            using (HttpClient client = new HttpClient())
+        public async Task<IEnumerable<Models.File>> GetFilesByClient(string clientId) => await GetOrThrow<IEnumerable<Models.File>>(
+            "files",
+            new[]
             {
-                var request = GetHttpMessage($"appointments/{appointmentId}", HttpMethod.Get);
+                ("clientId", clientId)
+            });
 
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var appointment = JsonConvert.DeserializeObject<Appointment>(json);
-                    return appointment;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
+        public async Task<byte[]> GetFile(string id) => await GetBytesOrThrow($"files/{id}");
 
-        public async Task<AppointmentSettings> GetAppointmentSettings()
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var request = GetHttpMessage($"appointments/settings", HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var settings = JsonConvert.DeserializeObject<AppointmentSettings>(json);
-                    return settings;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<IEnumerable<Questionnaire>> GetQuestionnaires()
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-              
-                var request = GetHttpMessage("questionnaires", HttpMethod.Get);
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var questionnaires = JsonConvert.DeserializeObject<IEnumerable<Questionnaire>>(json);
-                    return questionnaires;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<IEnumerable<Invoice>> GetInvoicesByClient(int clientId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var parameters = new NameValueCollection();
-                parameters.Add("clientId", clientId.ToString());
-                
-                var request = GetHttpMessage("invoices" + parameters.ToQueryString(), HttpMethod.Get);
-                
-                
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var result = JsonConvert.DeserializeObject<IEnumerable<Invoice>>(json);
-                    return result;
-                }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException(error);
-                }
-            }
-        }
-        
-        public async Task<Appointment> CreateAppointment(CreateAppointmentDto dto)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"appointments", HttpMethod.Post);
-                request.Content = new StringContent(JsonConvert.SerializeObject(dto), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Appointment>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<Appointment> UpdateAppointment(UpdateAppointmentDto dto)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"appointments", HttpMethod.Put);
-                request.Content = new StringContent(JsonConvert.SerializeObject(dto), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Appointment>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-
-        public async Task<IEnumerable<Models.File>> GetFilesByClient(string clientId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var parameters = new NameValueCollection();
-                parameters.Add("clientId", clientId);
-
-                var request = GetHttpMessage("files" + parameters.ToQueryString(), HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var result = JsonConvert.DeserializeObject<IEnumerable<Models.File>>(json);
-                    return result;
-                }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException(error);
-                }
-            }
-        }
-
-        public async Task<byte[]> GetFile(string id)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var request = GetHttpMessage($"files/{id}", HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var bytes = await response.Content.ReadAsByteArrayAsync();
-                    return bytes;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-
-        public async Task<IEnumerable<Folder>> GetFolders()
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var request = GetHttpMessage("folders" , HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var result = JsonConvert.DeserializeObject<IEnumerable<Folder>>(json);
-                    return result;
-                }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException(error);
-                }
-            }
-        }
+        public async Task<IEnumerable<Folder>> GetFolders() => await GetOrThrow<IEnumerable<Folder>>("folders");
 
         public async Task UploadFile(string clientId, byte[] fileData, string fileName, string contentType)
-        {   
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Add("X-Auth-Key", _apiKey);                
-
-                using (var content = new MultipartFormDataContent())
-                {
-                    using (var streamContent = new StreamContent(new MemoryStream(fileData)))
-                    {
-                        streamContent.Headers.Add("Content-Type", "application/octet-stream");
-                        streamContent.Headers.Add("Content-Disposition", "form-data; name=\"file\"; filename=\"" + fileName + "\"");
-                        streamContent.Headers.ContentType.MediaType = contentType;
-                        
-                        content.Add(streamContent, "file", fileName);
-                        
-                        HttpResponseMessage response = await client.PostAsync(new Uri($"{_baseUrl}files/{clientId}"), content);
-
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            var error = await response.Content.ReadAsStringAsync();
-                            throw new HttpRequestException(error);
-                        }
-                    }
-                }
-            }
-        }
-
-        public async Task DeleteFile(string id)
         {
-            using (HttpClient client = new HttpClient())
+            using (var content = new MultipartFormDataContent())
+            using (var streamContent = new StreamContent(new MemoryStream(fileData)))
             {
-                var request = GetHttpMessage($"files/{id}", HttpMethod.Delete);
+                streamContent.Headers.Add("Content-Type", "application/octet-stream");
+                streamContent.Headers.Add("Content-Disposition", "form-data; name=\"file\"; filename=\"" + fileName + "\"");
+                streamContent.Headers.ContentType.MediaType = contentType;
 
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException(error);
-                }
-            }
-        }
-        
-        public async Task<IEnumerable<Practitioner>> ListPractitioners(bool includeInactive = false)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                
-                var request = GetHttpMessage($"practitioners?includeInactive={includeInactive}", HttpMethod.Get);
-                
-                
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var result = JsonConvert.DeserializeObject<IEnumerable<Practitioner>>(json);
-                    return result;
-                }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException(error);
-                }
+                content.Add(streamContent, "file", fileName);
+
+                var response = await _httpClient.PostAsync(new Uri($"files/{clientId}"), content);
+                response.EnsureSuccessStatusCode();
             }
         }
 
-        public async Task<Practitioner> CreatePractitioner(Practitioner practitioner)
-        {
-            using (HttpClient client = new HttpClient())
+        public async Task DeleteFile(string id) => await DeleteOrThrow($"files/{id}");
+
+        public async Task<IEnumerable<Practitioner>> ListPractitioners(bool includeInactive = false) => await GetOrThrow<IEnumerable<Practitioner>>($"practitioners?includeInactive={includeInactive}");
+
+        public async Task<Practitioner> CreatePractitioner(Practitioner practitioner) => await PostOrThrow<Practitioner>("practitioners", practitioner);
+
+        public async Task<Practitioner> UpdatePractitioner(Practitioner practitioner) => await PutOrThrow<Practitioner>("practitioners", practitioner);
+
+        public async Task DisablePractitioner(string id) => await PostOrThrow($"practitioners/{id}/disable");
+
+        public async Task EnablePractitioner(string id) => await PostOrThrow($"practitioners/{id}/enable");
+
+        public async Task DeletePractitioner(string id) => await DeleteOrThrow($"practitioners/{id}");
+
+        public async Task TransferPractitionerData(string sourcePractitionerId, string destinationPractitionerId) => await PostOrThrow($"practitioners/{sourcePractitionerId}/transferData/{destinationPractitionerId}");
+
+        public async Task TransferClientOwnership(string sourcePractitionerId, string destinationPractitionerId) => await PostOrThrow($"practitioners/{sourcePractitionerId}/transferClientOwnership/{destinationPractitionerId}");
+
+        public async Task<IEnumerable<Assistant>> ListAssistants() => await GetOrThrow<IEnumerable<Assistant>>("assistants");
+
+        public async Task<Assistant> CreateAssistant(Assistant assistant) => await PostOrThrow<Assistant>("assistants", assistant);
+
+        public async Task<Assistant> UpdateAssistant(Assistant assistant) => await PutOrThrow<Assistant>("assistants", assistant);
+
+        public async Task DeleteAssistant(string id) => await DeleteOrThrow("assistants/{id}");
+
+        public async Task<IEnumerable<TreatmentNoteSummary>> GetNotesSummary(string clientSearch = "", DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, int? pageNumber = null, int? status = null) => await GetOrThrow<IEnumerable<TreatmentNoteSummary>>(
+            "notes/summary",
+            new[]
             {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                ("client", clientSearch),
+                ("startDate", startDate.HasValue ? startDate.Value.ToString("yyyy-MM-dd") : null),
+                ("endDate", endDate.HasValue ? endDate.Value.ToString("yyyy-MM-dd") : null),
+                ("clientId", clientId.HasValue ? clientId.Value.ToString() : null),
+                ("page", pageNumber.HasValue ? pageNumber.Value.ToString(): null),
+                ("status", status.HasValue ? status.Value.ToString(): null)
+            });
 
-                var request = GetHttpMessage($"practitioners", HttpMethod.Post);
-                request.Content = new StringContent(JsonConvert.SerializeObject(practitioner), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Practitioner>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<Practitioner> UpdatePractitioner(Practitioner practitioner)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"practitioners", HttpMethod.Put);
-                request.Content = new StringContent(JsonConvert.SerializeObject(practitioner), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Practitioner>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task DisablePractitioner(string id)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"practitioners/{id}/disable", HttpMethod.Post);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task EnablePractitioner(string id)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"practitioners/{id}/enable", HttpMethod.Post);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task DeletePractitioner(string id)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"practitioners/{id}", HttpMethod.Delete);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task TransferPractitionerData(string sourcePractitionerId, string destinationPractitionerId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"practitioners/{sourcePractitionerId}/transferData/{destinationPractitionerId}", HttpMethod.Post);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task TransferClientOwnership(string sourcePractitionerId, string destinationPractitionerId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"practitioners/{sourcePractitionerId}/transferClientOwnership/{destinationPractitionerId}", HttpMethod.Post);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<IEnumerable<Assistant>> ListAssistants()
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                
-                var request = GetHttpMessage("assistants", HttpMethod.Get);
-                
-                
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var result = JsonConvert.DeserializeObject<IEnumerable<Assistant>>(json);
-                    return result;
-                }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException(error);
-                }
-            }
-        }
-        
-        public async Task<Assistant> CreateAssistant(Assistant assistant)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"assistants", HttpMethod.Post);
-                request.Content = new StringContent(JsonConvert.SerializeObject(assistant), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Assistant>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task<Assistant> UpdateAssistant(Assistant assistant)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"assistants", HttpMethod.Put);
-                request.Content = new StringContent(JsonConvert.SerializeObject(assistant), Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<Assistant>(json);
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-        
-        public async Task DeleteAssistant(string id)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var request = GetHttpMessage($"assistants/{id}", HttpMethod.Delete);
-                
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-
-        public async Task<IEnumerable<TreatmentNoteSummary>> GetNotesSummary(string clientSearch = "", DateTime? startDate = null, DateTime? endDate = null, int? clientId = null, int? pageNumber = null, int? status = null)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var parameters = new NameValueCollection();
-                if (!string.IsNullOrEmpty(clientSearch))
-                    parameters.Add("client", clientSearch);
-                if (startDate.HasValue)
-                    parameters.Add("startDate", startDate.Value.ToString("yyyy-MM-dd"));
-                if (endDate.HasValue)
-                    parameters.Add("endDate", endDate.Value.ToString("yyyy-MM-dd"));
-                if (clientId.HasValue)
-                    parameters.Add("clientId", clientId.Value.ToString());
-                if (pageNumber.HasValue)
-                    parameters.Add("page", pageNumber.Value.ToString());
-                if (status.HasValue)
-                    parameters.Add("status", pageNumber.Value.ToString());
-
-                var request = GetHttpMessage("notes/summary" + parameters.ToQueryString(), HttpMethod.Get);
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var notes = JsonConvert.DeserializeObject<IEnumerable<TreatmentNoteSummary>>(json);
-                    return notes;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
-
-        public async Task<TreatmentNote> GetFullNote(string noteId)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var request = GetHttpMessage($"notes/{noteId}", HttpMethod.Get);
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var note = JsonConvert.DeserializeObject<TreatmentNote>(json);
-                    return note;
-                }
-                else
-                {
-                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
-                }
-            }
-        }
+        public async Task<TreatmentNote> GetFullNote(string noteId) => await GetOrThrow<TreatmentNote>($"notes/{noteId}");
     }
 }

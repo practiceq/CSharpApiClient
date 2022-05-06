@@ -200,5 +200,65 @@ namespace IntakeQ.ApiClient
                 }
             }
         }
+        
+        public async Task<List<FormTemplate>> ListMasterForms()
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var request = GetHttpMessage($"masterForms", HttpMethod.Get);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {   
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<List<FormTemplate>>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task<List<FormTemplate>> ListPracticeForms(string practiceId)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var request = GetHttpMessage($"practice/{practiceId}/forms", HttpMethod.Get);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {   
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<List<FormTemplate>>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
+        public async Task<FormTemplate> CopyForm(CopyFormOptions options)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage("practice/copyForm", HttpMethod.Post);
+                request.Content = new StringContent(JsonConvert.SerializeObject(options), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<FormTemplate>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
     }
 }

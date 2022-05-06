@@ -10,6 +10,7 @@ namespace IntakeQ.ApiClient.Models
         public string ClientName { get; set; }
         public string ClientEmail { get; set; }
         public string ClientPhone { get; set; }
+        public string ClientDateOfBirth { get; set; }
         public int ClientId { get; set; }
         public string Status { get; set; }
         [JsonConverter(typeof(FromJavascripDateConverter))]

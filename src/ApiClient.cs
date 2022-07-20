@@ -120,6 +120,28 @@ namespace IntakeQ.ApiClient
             }
         }
         
+        public async Task<Intake> ResendForm(ResendForm resendForm)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                var request = GetHttpMessage($"intakes/resend", HttpMethod.Post);
+                request.Content = new StringContent(JsonConvert.SerializeObject(resendForm), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Intake>(json);
+                }
+                else
+                {
+                    throw new HttpRequestException(await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        
         /// <summary>
         /// Creates a form, but doesn't send it to the client. 
         /// </summary>
